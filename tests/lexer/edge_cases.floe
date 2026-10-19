@@ -1,0 +1,30 @@
+// Lexer stress test: every token class, plus the tricky prefixes.
+/* Block comments can span
+   several lines, and may contain * and / on their own. */
+
+// "|>" vs "|" and ">",  "->" vs "-" and ">",  ".." vs "."
+nums |> filter(x -> x > 3) |> map(x -> x - 1);
+let a = b->c;
+let s = arr[0..5];
+let t = arr[lo..hi];
+
+// Comparison and logical operators
+let c = a == b != c <= d >= e < f > g && h || !i;
+let m = a + b - c * d / e % f;
+
+// Keywords vs identifiers that merely start with a keyword
+let letter = 1; let iffy = 2; let pipeline = 3; let int_value = 4; let _x9 = 5;
+fn f(a: int, b: bool) -> int[] { a }
+pipe p = filter(v -> true) |> map(v -> false);
+for item in list { } while x { } if y { } else { }
+
+// Integer literals
+let i = 0; let big = 9223372036854775807;
+let r = 1.5..2;
+
+// Float and string literals
+let pi = 3.14159;
+let str = "hello, world";
+let esc = "tab\tnewline\nquote\"backslash\\";
+let empty = "";
+let typed: float = 2.5; let name: string = "floe";

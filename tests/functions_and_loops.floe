@@ -1,0 +1,24 @@
+fn double(value: int) -> int {
+    value * 2
+}
+
+// Recursion.
+fn factorial(n: int) -> int {
+    if n <= 1 { 1 } else { n * factorial(n - 1) }
+}
+
+fn is_even(n: int) -> bool {
+    n % 2 == 0
+}
+
+let values = [2, 4, 6];
+values |> map(x -> double(x)) |> print();
+
+let flags = [true, false];
+let sum = 0;
+for x in values {
+    if is_even(x) || !flags[1] {
+        sum = sum + factorial(x);
+    }
+}
+print(sum);
