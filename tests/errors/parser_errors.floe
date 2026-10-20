@@ -1,0 +1,9 @@
+// Each statement below contains one syntax error. The parser reports it,
+// skips to the next ';', and keeps going.
+let a = ;
+let b = (1 + 2;
+5 = b;
+let c = 1 < 2 < 3;
+fn broken(x int) -> int { x }
+let ok = 1;
+values |> 3;

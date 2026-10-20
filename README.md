@@ -1,31 +1,40 @@
 # Floe
-Floe is a compiled, statically-typed data pipeline language. The central idea is that data flows left to right through named transformation stages using the |> operator — making programs read the same way they execute.
 
-- - Install Flex, Bison, LLVM 14 or 16
+Floe is a compiled, statically typed data pipeline language. Data flows left to
+right through named transformation stages using the `|>` operator.
 
-    1. [X] Clean the System Package Repositories
+## Status
 
-        ```
-        sudo rm -f /etc/apt/sources.list.d/*llvm*
-        sudo rm -f /etc/apt/trusted.gpg.d/*llvm*
-        sudo apt update
-        ```
-    2. [X] Install Bison, Flex, and LLVM 16 Directly
+The front end is complete:
 
-        ```
-        sudo apt install -y bison flex clang-16 llvm-16 lld-16 lldb-16
-        ```
-    3. [X] Link them as System Defaults
+- **Lexer** (Flex, `src/lexer.l`): every token, with line:column positions and
+  lexical error messages. See [docs/lexer.md](docs/lexer.md).
+- **Parser** (Bison, `src/parser.y`): the full Floe grammar, building an AST
+  (`src/ast.h`), with syntax error messages and recovery. See
+  [docs/parser.md](docs/parser.md).
 
-        ```
-        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
-        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
-        sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-16 100
-        ```
+Semantic analysis and LLVM code generation are next.
 
-    - [X] Check Versions:
+## Building
 
-    ```
-    bison --version && flex --version && clang --version && llvm-config --version
-    ```
-- [ ]
+Install Flex, Bison, a C++17 compiler, and GNU Make. On Windows, build in WSL
+with these tools installed in the Linux distribution. On Ubuntu/WSL:
+
+```sh
+sudo apt update
+sudo apt install build-essential flex bison
+```
+
+```sh
+make                                        # build build/floe
+./build/floe --tokens tests/loops.floe      # print the token stream
+./build/floe --ast tests/mergesort.floe     # print the syntax tree
+./build/floe tests/basic_pipeline.floe      # just check that it parses
+make test                                   # lexer + parser tests
+```
+
+`make test` (or `make test-lexer` / `make test-parser` separately) checks that
+every program in `tests/` lexes and parses cleanly, and that every program in
+`tests/errors/` is rejected with `file:line:col` error messages.
+
+Run `make clean` to remove generated files and the executable.

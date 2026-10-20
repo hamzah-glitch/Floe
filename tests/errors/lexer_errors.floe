@@ -1,0 +1,10 @@
+// Each line below contains one lexical error.
+let a = 5 @ 3;
+let b = x | y;
+let c = x & y;
+let d = obj.field;
+let e = 12abc;
+let f = 99999999999999999999;
+let g = "bad \q escape";
+let h = "never closed;
+let i = 1; /* this comment never ends

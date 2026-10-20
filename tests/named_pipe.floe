@@ -1,0 +1,5 @@
+pipe keep_large = filter(x -> x > 10);
+pipe double_values = map(x -> x * 2);
+
+let values = [4, 12, 20];
+values |> keep_large |> double_values |> print();

@@ -1,0 +1,5 @@
+let values = [1, 2, 3, 4];
+
+values
+    |> map(x -> if x % 2 == 0 { x * 10 } else { x })
+    |> print();

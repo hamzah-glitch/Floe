@@ -1,0 +1,25 @@
+// Every type and literal kind, with explicit type annotations.
+let count: int = 3;
+let ratio: float = 0.75;
+let ready: bool = true;
+let title: string = "Floe\tdemo\n";
+let grid: int[][] = [[1, 2], [3, 4]];
+let empty: bool[] = [];
+
+fn scale(value: float, factor: float) -> float {
+    value * factor
+}
+
+// A function with no return type.
+fn report(label: string, value: int) {
+    print(label);
+    print(value);
+}
+
+report(title, -count);
+print(scale(ratio, 2.0));
+grid[0][1] = 20;
+
+// else-if chains, and `if` used as a value.
+let sign = if count > 0 { 1 } else if count < 0 { -1 } else { 0 };
+let doubled = (if ready { count } else { 0 }) * 2;

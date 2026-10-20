@@ -1,0 +1,6 @@
+let nums = [1, 2, 3, 4, 5];
+
+nums
+    |> filter(x -> x > 3)
+    |> map(x -> x * 2)
+    |> print();

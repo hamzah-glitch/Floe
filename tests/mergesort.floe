@@ -1,0 +1,37 @@
+fn merge(left: int[], right: int[]) -> int[] {
+    let result: int[] = [];
+    let i = 0;
+    let j = 0;
+    while i < len(left) && j < len(right) {
+        if left[i] <= right[j] {
+            result = append(result, left[i]);
+            i = i + 1;
+        } else {
+            result = append(result, right[j]);
+            j = j + 1;
+        }
+    }
+    while i < len(left) {
+        result = append(result, left[i]);
+        i = i + 1;
+    }
+    while j < len(right) {
+        result = append(result, right[j]);
+        j = j + 1;
+    }
+    result
+}
+
+fn merge_sort(values: int[]) -> int[] {
+    if len(values) <= 1 {
+        values
+    } else {
+        let mid = len(values) / 2;
+        let left = merge_sort(values[0..mid]);
+        let right = merge_sort(values[mid..len(values)]);
+        merge(left, right)
+    }
+}
+
+let unsorted = [8, 3, 5, 1, 9, 2];
+merge_sort(unsorted) |> print();

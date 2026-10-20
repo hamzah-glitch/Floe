@@ -67,10 +67,11 @@ Converts raw source text into a token stream.
 **Full token list:**
 
 - Keywords: `let`, `fn`, `pipe`, `if`, `else`, `for`, `while`, `in`, `true`, `false`
-- Types: `int`, `float`, `bool`, `string`
-- Operators: `|>`, `->`, `..`, `+`, `-`, `*`, `/`, `==`, `!=`, `<=`, `>=`, `&&`, `||`
+- Types: `int`, `float`, `bool`, `string` (arrays written `int[]`, `float[][]`, ...)
+- Operators: `|>`, `->`, `..`, `=`, `+`, `-`, `*`, `/`, `%`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `&&`, `||`, `!`
 - Delimiters: `{`, `}`, `[`, `]`, `(`, `)`, `;`, `,`, `:`
-- Literals: integer, float, string, boolean
+- Literals: integer, float (`3.14`), string (`"text"` with escapes `\n` `\t` `\r` `\0` `\\` `\"`), boolean (`true` / `false`)
+- Comments: `// line` and `/* block */`
 - Identifiers
 
 ---
@@ -79,40 +80,50 @@ Converts raw source text into a token stream.
 
 Converts token stream into an AST using an LALR(1) grammar.
 
-**Key grammar rules:**
+**Key grammar rules** (full grammar and design notes in `docs/parser.md`):
 
 ```
-pipeline_expr  → expr (PIPE_OP call_expr)*      // left-associative
-pipe_decl      → 'pipe' IDENT '=' pipeline_expr
-fn_decl        → 'fn' IDENT '(' params ')' '->' type '{' body '}'
-lambda         → IDENT '->' expr
-slice          → IDENT '[' expr '..' expr ']'
-for_stmt       → 'for' IDENT 'in' expr '{' body '}'
+pipeline       → expr '|>' stage                 // left-associative, flattened in the AST
+stage          → IDENT | IDENT '(' args ')'       // call stage or named pipe
+pipe_decl      → 'pipe' IDENT '=' stage ('|>' stage)* ';'
+fn_decl        → 'fn' IDENT '(' params ')' ('->' type)? block
+lambda         → IDENT '->' value_expr            // only as a call argument
+slice          → postfix '[' expr '..' expr ']'
+let_stmt       → 'let' IDENT (':' type)? '=' value_expr ';'
+assign_stmt    → (IDENT | postfix '[' expr ']') '=' value_expr ';'
+for_stmt       → 'for' IDENT 'in' expr block
+while_stmt     → 'while' expr block
+if_expr        → 'if' expr block ('else' (block | if_expr))?
+block          → '{' statement* expr? '}'         // trailing expr = implicit return
 ```
 
 **Precedence (lowest to highest):**
 
 ```
-%left  PIPE_OP
-%left  '||'
-%left  '&&'
-%left  '==' '!='
-%left  '<' '>' '<=' '>='
-%left  '+' '-'
-%left  '*' '/'
-%right ARROW
+%precedence PIPE_OP
+%left       '||'
+%left       '&&'
+%nonassoc   '==' '!='
+%nonassoc   '<' '>' '<=' '>='
+%left       '+' '-'
+%left       '*' '/' '%'
+%precedence UNARY          // unary '-' and '!'
 ```
+
+`->` needs no precedence: lambdas only appear as call arguments, so a lambda
+body naturally extends to the next `,` or `)`.
 
 **AST node types needed:**
 
 | Category     | Nodes                                                        |
 | ------------ | ------------------------------------------------------------ |
-| Declarations | `FnDecl`, `PipeDecl`, `LetStmt`                        |
-| Expressions  | `PipelineExpr`, `CallExpr`, `LambdaExpr`, `BinaryOp` |
-| Literals     | `IntLit`, `FloatLit`, `BoolLit`, `ArrayLit`          |
-| Array ops    | `SliceExpr`, `IndexExpr`                                 |
-| Control flow | `IfExpr`, `WhileStmt`, `ForInStmt`                     |
-| Misc         | `Identifier`, `Block`                                    |
+| Declarations | `FunctionDeclaration`, `PipelineDeclaration`, `PipeStage` |
+| Statements   | `LetStatement`, `AssignStatement`, `ExpressionStatement` |
+| Expressions  | `PipelineExpression`, `CallExpression`, `LambdaExpression`, `UnaryExpression`, `BinaryExpression` |
+| Literals     | `IntegerLiteral`, `FloatLiteral`, `BooleanLiteral`, `StringLiteral`, `ArrayLiteral` |
+| Array ops    | `SliceExpression`, `IndexExpression` |
+| Control flow | `IfExpression`, `WhileStatement`, `ForInStatement` |
+| Misc         | `Program`, `Identifier`, `Block` |
 
 ---
 
@@ -156,6 +167,7 @@ Walks the typed AST and emits LLVM IR via C++ `IRBuilder`.
 floe/
 ├── src/
 │   ├── lexer.l           ← Flex lexer
+│   ├── lexer.h           ← Lexer interface shared with parser and main
 │   ├── parser.y          ← Bison parser + AST construction
 │   ├── ast.h             ← AST node definitions
 │   ├── ast.cpp           ← AST printer (debug tool)
@@ -164,11 +176,13 @@ floe/
 │   ├── codegen.h         ← Code generator interface
 │   ├── codegen.cpp       ← LLVM IR emission
 │   └── main.cpp          ← Entry point: read .floe → lex → parse → sema → codegen
+├── docs/
+│   ├── lexer.md          ← How the lexer was built and how it works
+│   └── parser.md         ← How the parser was built and how it works
 ├── tests/
-│   ├── basic_pipeline.floe
-│   ├── named_pipe.floe
-│   ├── if_in_pipeline.floe
-│   └── mergesort.floe
+│   ├── *.floe            ← Valid programs (must lex and parse)
+│   ├── lexer/            ← Lexer-only stress inputs
+│   └── errors/           ← Programs that must be rejected
 └── Makefile
 ```
 
@@ -191,36 +205,37 @@ floe/
 ### Phase 0 — Setup (Day 1)
 
 - [X] Create GitHub repo and agree on folder structure
-- [X] Install Flex, Bison, LLVM 14 or 16
 
-  1. [X] Clean the System Package Repositories
+  - [X] Install Flex, Bison, LLVM 14 or 16
 
-      ```
-      sudo rm -f /etc/apt/sources.list.d/*llvm*
-      sudo rm -f /etc/apt/trusted.gpg.d/*llvm*
-      sudo apt update
-      ```
-  2. [X] Install Bison, Flex, and LLVM 16 Directly
+    1. [X] Clean the System Package Repositories
 
-      ```
-      sudo apt install -y bison flex clang-16 llvm-16 lld-16 lldb-16
-      ```
-  3. [X] Link them as System Defaults
+        ```
+        sudo rm -f /etc/apt/sources.list.d/*llvm*
+        sudo rm -f /etc/apt/trusted.gpg.d/*llvm*
+        sudo apt update
+        ```
+    2. [X] Install Bison, Flex, and LLVM 16 Directly
 
-      ```
-      sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
-      sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
-      sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-16 100
-      ```
+        ```
+        sudo apt install -y bison flex clang-16 llvm-16 lld-16 lldb-16
+        ```
+    3. [X] Link them as System Defaults
 
-  - [X] Check Versions:
+        ```
+        sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
+        sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
+        sudo update-alternatives --install /usr/bin/llvm-config llvm-config /usr/bin/llvm-config-16 100
+        ```
 
-  ```
-  bison --version && flex --version && clang --version && llvm-config --version
-  ```
-- [ ]  Write `Makefile` that compiles `.l` + `.y` + C++ into the `floe` binary
-- [ ] Define all AST node structs in `ast.h` (skeleton, no logic yet)
-- [ ] Write 5 sample `.floe` programs you want to compile by the end
+    - [X] Check Versions:
+
+    ```
+    bison --version && flex --version && clang --version && llvm-config --version
+    ```
+- [X] Write `Makefile` that compiles `.l` + `.y` + C++ into the `floe` binary
+- [X] Define all AST node structs in `ast.h` (skeleton, no logic yet)
+- [X] Write 5 sample `.floe` programs you want to compile by the end
 
 ---
 
@@ -228,16 +243,16 @@ floe/
 
 **Day 2 — Write `lexer.l`**
 
-- [ ] Define all token rules (keywords, operators, literals, identifiers)
-- [ ] Place `|>`, `->`, `..` rules **before** their single-character counterparts
-- [ ] Handle comments (`// …`) — skip to end of line
-- [ ] Test: pipe source text through lexer and print the token stream
+- [X] Define all token rules (keywords, operators, literals, identifiers)
+- [X] Place `|>`, `->`, `..` rules **before** their single-character counterparts
+- [X] Handle comments (`// …`) — skip to end of line
+- [X] Test: pipe source text through lexer and print the token stream
 
 **Day 3 — Stress test & fix**
 
-- [ ] Test `|>` vs `|`, `->` vs `-` and `>`, `..` vs `.`
-- [ ] Confirm `arr[0..5]` tokenizes as `IDENT [ INT DOTDOT INT ]`
-- [ ] Finalize the token enum shared with Bison
+- [X] Test `|>` vs `|`, `->` vs `-` and `>`, `..` vs `.`
+- [X] Confirm `arr[0..5]` tokenizes as `IDENT [ INT DOTDOT INT ]`
+- [X] Finalize the token enum shared with Bison
 
 ---
 
@@ -245,29 +260,31 @@ floe/
 
 **Day 4 — Grammar skeleton**
 
-- [ ] Start `parser.y` with program, fn_decl, let_stmt, basic expr rules
-- [ ] Attach semantic actions that build and return AST nodes
-- [ ] Confirm `let x = 5;` parses without errors
+- [X] Start `parser.y` with program, fn_decl, let_stmt, basic expr rules
+- [X] Attach semantic actions that build and return AST nodes
+- [X] Confirm `let x = 5;` parses without errors
 
 **Day 5 — Pipeline grammar**
 
-- [ ] Add `pipeline_expr → expr (PIPE_OP call_expr)*`
-- [ ] Add lambda rule: `IDENT ARROW expr`
-- [ ] Set `%left PIPE_OP`, `%right ARROW`
-- [ ] Test: `nums |> filter(x -> x > 3) |> map(x -> x * 2)` parses correctly
+- [X] Add `expr '|>' stage` (flattened into one `PipelineExpression`)
+- [X] Add lambda rule: `IDENT ARROW value_expr` (call arguments only)
+- [X] Set `%precedence PIPE_OP` as the lowest operator
+- [X] Test: `nums |> filter(x -> x > 3) |> map(x -> x * 2)` parses correctly
 
 **Day 6 — Named pipes, slices, control flow**
 
-- [ ] Add `pipe IDENT = pipeline_expr`
-- [ ] Add `arr[expr..expr]` slice rule
-- [ ] Add `for item in collection { }` and `while cond { }`
-- [ ] Add `if expr { } else { }`
+- [X] Add `pipe IDENT = stage |> stage ...;`
+- [X] Add `arr[expr..expr]` slice rule
+- [X] Add `for item in collection { }` and `while cond { }`
+- [X] Add `if expr { } else { }` (with `else if` chains)
+- [X] Add assignment `x = expr;` / `arr[i] = expr;` (needed for loops)
 
 **Day 7 — AST printer (debug tool)**
 
-- [ ] Write a function in `ast.cpp` that prints the AST as indented text
-- [ ] Run all 5 sample programs through the parser and inspect their ASTs
-- [ ] Resolve any Bison shift/reduce conflicts
+- [X] Write a function in `ast.cpp` that prints the AST as indented text (`--ast`)
+- [X] Run all sample programs through the parser and inspect their ASTs
+- [X] Resolve any Bison shift/reduce conflicts (`%expect 0` — grammar has none)
+- [X] Syntax-error recovery (`error ';'`) with `file:line:col` messages
 
 ---
 
