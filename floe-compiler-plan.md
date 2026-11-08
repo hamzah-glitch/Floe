@@ -292,21 +292,21 @@ floe/
 
 **Day 8 — Symbol table + basic type checking**
 
-- [ ] Implement `SymbolTable` class: `define(name, type)`, `lookup(name)`
-- [ ] AST walker: on `let` → add to table; on identifier → look up
-- [ ] Error reporting with line numbers for undefined variables and type mismatches
+- [X] Implement `SymbolTable` class: `define(name, type)`, `lookup(name)`
+- [X] AST walker: on `let` → add to table; on identifier → look up
+- [X] Error reporting with line numbers for undefined variables and type mismatches
 
 **Day 9 — Pipeline type checking**
 
-- [ ] Verify each stage's input type matches the previous stage's output type
-- [ ] Validate lambda parameter type matches element type of incoming array
-- [ ] Resolve `pipe` references: inline named pipeline's stages at call sites
+- [X] Verify each stage's input type matches the previous stage's output type
+- [X] Validate lambda parameter type matches element type of incoming array
+- [X] Resolve `pipe` references: inline named pipeline's stages at call sites
 
 **Day 10 — Slice validation + finalize**
 
-- [ ] Check sliced variable is an array type
-- [ ] Check slice indices are integers
-- [ ] Run all 5 sample programs through sema with no false errors
+- [X] Check sliced variable is an array type
+- [X] Check slice indices are integers
+- [X] Run all 5 sample programs through sema with no false errors
 
 ---
 
@@ -314,43 +314,43 @@ floe/
 
 **Day 11 — LLVM setup + `fn` functions**
 
-- [ ] Initialize `LLVMContext`, `Module`, `IRBuilder`
-- [ ] Emit a simple `fn add(a: int, b: int) -> int { a + b }` as LLVM IR
-- [ ] Verify with `llvm::verifyFunction`, run with `lli`
+- [X] Initialize `LLVMContext`, `Module`, `IRBuilder`
+- [X] Emit a simple `fn add(a: int, b: int) -> int { a + b }` as LLVM IR
+- [X] Verify with `llvm::verifyFunction`, run with `lli`
 
 **Day 12 — Variables, arithmetic, if/else**
 
-- [ ] `let x = 5` → `alloca i64` + `store`
-- [ ] Arithmetic operators → `add`, `sub`, `mul`, `sdiv`
-- [ ] Comparisons → `icmp eq/ne/slt/sle/sgt/sge`
-- [ ] `if/else` → `br` + basic blocks + `phi` node
+- [X] `let x = 5` → `alloca i64` + `store`
+- [X] Arithmetic operators → `add`, `sub`, `mul`, `sdiv`
+- [X] Comparisons → `icmp eq/ne/slt/sle/sgt/sge`
+- [X] `if/else` → `br` + basic blocks + `phi` node
 
 **Day 13 — Arrays and loops**
 
-- [ ] `int[]` literals → `alloca [N x i64]` + `store` per element
-- [ ] Track array length as a separate `i64` variable
-- [ ] `while cond { }` → loop basic block with `br` backedge
-- [ ] Implement `len()` as a lookup of the tracked length variable
-- [ ] Implement `append()` as a helper (C runtime or custom IR)
+- [X] `int[]` literals → `alloca [N x i64]` + `store` per element
+- [X] Track array length as a separate `i64` variable
+- [X] `while cond { }` → loop basic block with `br` backedge
+- [X] Implement `len()` as a lookup of the tracked length variable
+- [X] Implement `append()` as a helper (C runtime or custom IR)
 
 **Day 14 — Slices**
 
-- [ ] `arr[0..mid]` → GEP to start pointer, copy elements into new alloca
-- [ ] Update length tracking for the new slice variable
+- [X] `arr[0..mid]` → GEP to start pointer, copy elements into new alloca
+- [X] Update length tracking for the new slice variable
 
 **Day 15 — Pipeline lowering**
 
-- [ ] `filter(x -> cond)` → loop + inline lambda as branch condition + result buffer
-- [ ] `map(x -> expr)` → loop + inline lambda as transform + store
-- [ ] Chain stages: output array of stage N is input to stage N+1
-- [ ] Named `pipe` → inline at call site (already resolved in sema)
+- [X] `filter(x -> cond)` → loop + inline lambda as branch condition + result buffer
+- [X] `map(x -> expr)` → loop + inline lambda as transform + store
+- [X] Chain stages: output array of stage N is input to stage N+1
+- [X] Named `pipe` → inline at call site (already resolved in sema)
 
 **Day 16 — Integration + `print` built-in**
 
-- [ ] Declare `printf` as an external function in the LLVM module
-- [ ] Implement `print(arr)` by looping and calling `printf` per element
-- [ ] Wire up `main.cpp`: `.floe` → lex → parse → sema → codegen → write `.ll`
-- [ ] Run `llc output.ll -o output.o && clang output.o -o floe_program` and execute
+- [X] Declare `printf` as an external function in the LLVM module
+- [X] Implement `print(arr)` by looping and calling `printf` per element
+- [X] Wire up `main.cpp`: `.floe` → lex → parse → sema → codegen → write `.ll`
+- [X] Run `llc output.ll -o output.o && clang output.o -o floe_program` and execute
 
 ---
 
@@ -358,16 +358,16 @@ floe/
 
 **Day 17 — End-to-end tests**
 
-- [ ] Basic pipeline: filter + map + sort + print ✅
-- [ ] Named and composed pipelines ✅
-- [ ] If/else inside a pipeline stage ✅
-- [ ] Merge sort (fn, recursion, slices, while loops) ✅
+- [X] Basic pipeline: filter + map + sort + print ✅
+- [X] Named and composed pipelines ✅
+- [X] If/else inside a pipeline stage ✅
+- [X] Merge sort (fn, recursion, slices, while loops) ✅
 
 **Day 18 — Error messages**
 
-- [ ] Lex errors: unknown character (with line number)
-- [ ] Parse errors: unexpected token (Bison `yyerror` with line number)
-- [ ] Sema errors: type mismatch, undefined variable, pipeline type error
+- [X] Lex errors: unknown character (with line number)
+- [X] Parse errors: unexpected token (Bison `yyerror` with line number)
+- [X] Sema errors: type mismatch, undefined variable, pipeline type error
 
 **Day 19 — JIT mode (stretch goal)**
 
@@ -377,9 +377,9 @@ floe/
 
 **Day 20 — Demo preparation**
 
-- [ ] Write `README.md` with build instructions and example programs
-- [ ] Prepare 3–4 demo programs to walk through live
-- [ ] Practice showing: source → token stream → AST → IR → output
+- [X] Write `README.md` with build instructions and example programs
+- [X] Prepare 3–4 demo programs to walk through live
+- [X] Practice showing: source → token stream → AST → IR → output
 
 ---
 
@@ -418,8 +418,8 @@ Named `pipe`, array slices, and JIT mode are the impressive extras on top.
 | Flex for lexical analysis | ✅           | `lexer.l` — `\|>`, `->`, `..` as dedicated tokens  |
 | Bison for parsing         | ✅           | `parser.y` — LALR(1) grammar                            |
 | LLVM IR generation        | ✅           | `codegen.cpp` — IRBuilder API                           |
-| AOT compilation           | ✅           | `llc` + `clang` → native object file                  |
-| JIT compilation           | ✅ (planned) | `--run` flag via ORC JIT                                 |
+| AOT compilation           | ✅           | `floec`: LLVM TargetMachine → object file → `cc` link |
+| JIT compilation           | — (optional) | Not required by the assignment; not implemented          |
 | Original language         | ✅           | `pipe` keyword, `\|>` as compiled first-class operator  |
 | Domain focus              | ✅           | Data pipeline / transformation                             |
 | Novel syntax              | ✅           | `pipe`, `\|>`, `x -> expr`, `arr[0..n]`, `for-in` |
@@ -428,3 +428,27 @@ Named `pipe`, array slices, and JIT mode are the impressive extras on top.
 | Loops                     | ✅           | `while` and `for-in`                                   |
 | If/else                   | ✅           | In`fn` bodies and inside lambdas                         |
 | Functions                 | ✅           | `fn` keyword with full recursion                         |
+
+---
+
+## Implementation Notes (final)
+
+The assignment asked for two deliverables, which map onto this plan as:
+
+- **Phase 1 — Interpreter** (`build/floe`): the Bison action of the `items`
+  rule hands each top-level item to `src/interpreter.cpp` as soon as it is
+  parsed, and the item is executed immediately. See `docs/interpreter.md`.
+- **Phase 2 — AOT compiler** (`build/floec`): the same Bison action hands
+  each item to `src/codegen.cpp`, which emits LLVM IR; LLVM compiles it to an
+  object file that is linked with `src/runtime/floe_runtime.c`. See
+  `docs/codegen.md`.
+
+Where the final design differs from the original plan:
+
+- Arrays are runtime-allocated `{length, capacity, data}` objects
+  (`FloeArray`), not `alloca [N x i64]`, so they can grow (`append`), be
+  sliced, be returned from functions and be nested.
+- `len()`, `append()`, slices, `sort()` and printing are C runtime functions;
+  `filter` and `map` are lowered to inline loops in the IR as planned.
+- Top-level variables are LLVM globals, so functions can use them.
+- The JIT stretch goal (Day 19) was not needed for the assignment.

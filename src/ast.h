@@ -17,12 +17,19 @@ struct SourceLocation {
 // Types as written in the source: `int`, `bool[]`, `float[][]`, ...
 // ---------------------------------------------------------------------------
 
-enum class BaseType { Int, Float, Bool, String, Void };
+// `Error` never appears in source; semantic analysis gives it to expressions
+// that failed to type-check so that one mistake is reported only once.
+enum class BaseType { Int, Float, Bool, String, Void, Error };
 
 struct TypeName {
     BaseType base = BaseType::Void;
     int array_depth = 0;  // int -> 0, int[] -> 1, int[][] -> 2
 };
+
+inline bool operator==(const TypeName& a, const TypeName& b) {
+    return a.base == b.base && a.array_depth == b.array_depth;
+}
+inline bool operator!=(const TypeName& a, const TypeName& b) { return !(a == b); }
 
 std::string to_string(const TypeName& type);
 
@@ -64,6 +71,7 @@ struct Node {
 
     NodeKind kind;
     SourceLocation location;
+    TypeName type;  // filled in by semantic analysis for expressions
 };
 
 using NodePtr = std::unique_ptr<Node>;
@@ -244,6 +252,7 @@ struct LambdaExpression : Node {
 
     std::string parameter;
     NodePtr body;
+    TypeName parameter_type;  // element type of the incoming array (set by sema)
 };
 
 enum class UnaryOp { Negate, Not };
@@ -306,5 +315,10 @@ struct SliceExpression : Node {
 
 // Print the tree as indented text (the `--ast` debug view).
 void print_ast(const Node& node, std::ostream& out);
+
+// Deep copies, used to inline a named pipe's stages at each place it is used.
+NodePtr clone(const Node& node);
+BlockPtr clone(const Block& block);
+StagePtr clone(const PipeStage& stage);
 
 }  // namespace floe

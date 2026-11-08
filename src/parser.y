@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "ast.h"
+#include "item_handler.h"
 }
 
 %code provides {
@@ -35,8 +36,19 @@ void yyerror(const char* message);
 %code {
 floe::Program* floe_parse_result = nullptr;
 int floe_parse_error_count = 0;
+floe::ItemHandler* floe_item_handler = nullptr;
 
 namespace {
+
+// Syntax-directed execution: called from the `items` action as soon as a
+// top-level item has been reduced. Once the input has a lexical or syntax
+// error, nothing more is executed or compiled; parsing continues only to
+// report further errors.
+void dispatch_item(floe::Node& item) {
+    if (floe_item_handler != nullptr && floe_lex_error_count == 0 && floe_parse_error_count == 0) {
+        floe_item_handler->handle(item);
+    }
+}
 
 floe::SourceLocation loc(const YYLTYPE& location) {
     return {location.first_line, location.first_column};
@@ -153,7 +165,15 @@ program:
 
 items:
     %empty              { $$ = new floe::NodeList(); }
-  | items item          { $$ = $1; if ($2) $$->emplace_back($2); }
+  | items item
+        {
+            /* Hand the finished item to the interpreter / code generator. */
+            $$ = $1;
+            if ($2) {
+                $$->emplace_back($2);
+                dispatch_item(*$2);
+            }
+        }
   ;
 
 item:

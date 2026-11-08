@@ -1,0 +1,23 @@
+tests/errors/sema_errors.floe:3:9: semantic error: undefined variable 'undefined_name'
+tests/errors/sema_errors.floe:4:14: semantic error: initial value of 'b' should be 'int', but it is 'string'
+tests/errors/sema_errors.floe:5:11: semantic error: operator '+' cannot be applied to 'int' and 'bool'
+tests/errors/sema_errors.floe:6:13: semantic error: array elements must all have the same type: 'int' and 'string'
+tests/errors/sema_errors.floe:7:9: semantic error: cannot infer the type of an empty array; add a type, e.g. let xs: int[] = [];
+tests/errors/sema_errors.floe:9:1: semantic error: 'n' is already declared in this scope
+tests/errors/sema_errors.floe:11:9: semantic error: 'add' expects 2 arguments but got 1 (in a pipeline the piped value is the first argument)
+tests/errors/sema_errors.floe:12:16: semantic error: argument 2 of 'add' should be 'int', but it is 'string'
+tests/errors/sema_errors.floe:13:1: semantic error: function 'no_value' must end with an expression of type 'int' (its return value)
+tests/errors/sema_errors.floe:14:9: semantic error: unknown function 'missing'
+tests/errors/sema_errors.floe:16:31: semantic error: the condition of filter should be 'bool', but it is 'int'
+tests/errors/sema_errors.floe:17:26: semantic error: the lambda of map must produce a value
+tests/errors/sema_errors.floe:18:14: semantic error: array index should be 'int', but it is 'bool'
+tests/errors/sema_errors.floe:20:37: semantic error: cannot assign to 'total' inside a lambda: lambdas cannot modify variables of the enclosing scope
+tests/errors/sema_errors.floe:21:9: semantic error: the branches of this if have different types: 'int' and 'string'
+tests/errors/sema_errors.floe:22:9: semantic error: 'o' cannot be initialised with an expression that has no value (an 'if' needs an 'else' and a value in both branches)
+tests/errors/sema_errors.floe:23:1: semantic error: cannot define a function named 'print': it is a built-in function
+tests/errors/sema_errors.floe:24:9: semantic error: 'sort' needs an array, but this is 'int'
+tests/errors/sema_errors.floe:25:9: semantic error: function 'add' cannot be used as a value; call it: add(...)
+tests/errors/sema_errors.floe:26:33: semantic error: unknown pipeline stage 'nowhere'
+tests/errors/sema_errors.floe:27:7: semantic error: while condition should be 'bool', but it is 'int'
+tests/errors/sema_errors.floe:28:19: semantic error: array element should be 'float', but it is 'string'
+tests/errors/sema_errors.floe: 22 semantic error(s)

@@ -1,0 +1,23 @@
+// Student scores: functions, a named pipe, pipelines, loops and if/else.
+pipe passing = filter(s -> s >= 50);
+
+fn grade(score: int) -> string {
+    if score >= 80 { "A" } else if score >= 65 { "B" } else if score >= 50 { "C" } else { "F" }
+}
+
+fn average(values: int[]) -> float {
+    to_float(sum(values)) / to_float(len(values))
+}
+
+let scores = [72, 45, 91, 66, 38, 85];
+
+print("sorted:", scores |> sort());
+print("passing:", scores |> passing);
+print("grades:", scores |> map(s -> grade(s)));
+print("average:", average(scores));
+
+let best = 0;
+for s in scores {
+    if s > best { best = s; }
+}
+print("best:", best, "=", grade(best));

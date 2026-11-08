@@ -1,0 +1,77 @@
+// Classic algorithms: recursion, while loops and in-place array updates.
+fn fib(n: int) -> int {
+    if n < 2 { n } else { fib(n - 1) + fib(n - 2) }
+}
+
+fn gcd(a: int, b: int) -> int {
+    if b == 0 { a } else { gcd(b, a % b) }
+}
+
+// Sieve of Eratosthenes
+fn primes_below(limit: int) -> int[] {
+    let is_prime = range(0, limit) |> map(i -> i >= 2);
+    let p = 2;
+    while p * p < limit {
+        if is_prime[p] {
+            let multiple = p * p;
+            while multiple < limit {
+                is_prime[multiple] = false;
+                multiple = multiple + p;
+            }
+        }
+        p = p + 1;
+    }
+    range(0, limit) |> filter(i -> is_prime[i])
+}
+
+// Bubble sort, in place
+fn bubble_sort(values: int[]) {
+    let n = len(values);
+    let i = 0;
+    while i < n {
+        let j = 0;
+        while j < n - 1 - i {
+            if values[j] > values[j + 1] {
+                let tmp = values[j];
+                values[j] = values[j + 1];
+                values[j + 1] = tmp;
+            }
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+// Binary search: index of target, or -1
+fn find(sorted: int[], target: int) -> int {
+    let lo = 0;
+    let hi = len(sorted);
+    let found = -1;
+    while lo < hi && found == -1 {
+        let mid = (lo + hi) / 2;
+        if sorted[mid] == target {
+            found = mid;
+        } else if sorted[mid] < target {
+            lo = mid + 1;
+        } else {
+            hi = mid;
+        }
+    }
+    found
+}
+
+range(0, 15) |> map(n -> fib(n)) |> print();
+print(gcd(84, 36), gcd(17, 5));
+let primes = primes_below(50);
+print(primes);
+
+let data = [9, 4, 7, 1, 8, 2];
+bubble_sort(data);
+print(data);
+print(find(data, 7), find(data, 5));
+
+// Deep recursion
+fn count_down(n: int) -> int {
+    if n == 0 { 0 } else { 1 + count_down(n - 1) }
+}
+print(count_down(10000));

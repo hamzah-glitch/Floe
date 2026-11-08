@@ -1,0 +1,20 @@
+// Strings, conversions and int/float promotion.
+let name = "Floe";
+let greeting = "Hello, " + name + "!";
+print(greeting, len(greeting));
+print("abc" < "abd", "b" > "abc", name == "Floe", name != "floe");
+print("n = " + to_string(42) + ", pi ~ " + to_string(3.14) + ", ok = " + to_string(true));
+
+// an int is promoted to float wherever a float is expected
+let half: float = 1;
+let mixed = 3 * 0.5;
+print(half, mixed, 7 / 2, 7.0 / 2, 7 % 3, 7.5 % 2);
+print(to_int(9.99), to_int(-9.99), to_float(4));
+print(1.0, 0.1 + 0.2, 1.0 / 3.0, 2.5 * 0);
+
+fn area(radius: float) -> float {
+    3.14159 * radius * radius
+}
+print(area(2));           // int argument -> float parameter
+let mixed_list = [1, 2.5, 3];
+print(mixed_list);        // int elements promoted: float[]
