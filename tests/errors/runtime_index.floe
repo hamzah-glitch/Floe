@@ -1,0 +1,5 @@
+// Prints the first line, then stops with a runtime error.
+let values = [10, 20, 30];
+print(values[2]);
+print(values[3]);
+print("never printed");

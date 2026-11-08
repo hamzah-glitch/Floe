@@ -1,0 +1,1 @@
+tests/errors/runtime_empty_min.floe:3:16: runtime error: min() of an empty array

@@ -1,0 +1,41 @@
+// Scopes, shadowing, global variables and array reference semantics.
+let counter = 100;
+
+fn bump(by: int) -> int {
+    counter = counter + by;   // functions can read and write globals
+    counter
+}
+print(bump(1), bump(10), counter);
+
+let x = 1;
+if true {
+    let x = 2;                // shadows the outer x inside this block
+    print("inner", x);
+}
+print("outer", x);
+
+// Arrays are references: b and a are the same array.
+let a = [1, 2, 3];
+let b = a;
+b[0] = 99;
+print(a, b);
+
+// Slices copy.
+let c = a[0..2];
+c[0] = -1;
+print(a, c);
+
+// Nested loops, and a loop variable per iteration.
+let pairs: int[][] = [];
+for i in range(1, 4) {
+    for j in range(i, 4) {
+        pairs = append(pairs, [i, j]);
+    }
+}
+print(pairs);
+
+// if as a value, else-if chains
+fn classify(n: int) -> string {
+    if n < 0 { "negative" } else if n == 0 { "zero" } else { "positive" }
+}
+[-5, 0, 5] |> map(n -> classify(n)) |> print();

@@ -1,0 +1,3 @@
+fn ratio(a: int, b: int) -> int { a / b }
+print(ratio(10, 2));
+print(ratio(1, 0));

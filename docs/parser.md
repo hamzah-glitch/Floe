@@ -355,13 +355,14 @@ still counts the error).
 
 ### Step 11 — Driver, AST printer and tests
 
-`src/main.cpp` has three modes:
+`src/main.cpp` has these front-end modes (running a program is covered in
+[interpreter.md](interpreter.md)):
 
 | Command | Does |
 | ------- | ---- |
 | `./build/floe --tokens file.floe` | Lexer only: print the token table. |
 | `./build/floe --ast file.floe` | Parse and print the AST. |
-| `./build/floe file.floe` | Parse and print `parsed successfully (N top-level items)`. |
+| `./build/floe --parse file.floe` | Parse and print `parsed successfully (N top-level items)`. |
 
 Every mode exits with status 1 if there was any lexical or syntax error.
 
@@ -413,22 +414,39 @@ These matter to anyone writing Floe programs:
 ## 4. Building and running
 
 ```sh
-make                                      # flex + bison + g++ → build/floe
+make interpreter                          # flex + bison + g++ → build/floe
 ./build/floe --ast tests/mergesort.floe   # print the AST
-make test                                 # lexer + parser tests
+make test-parser                          # parser tests
 ```
 
 ---
 
 ## 5. What the next phase gets
 
-`yyparse()` hands `main.cpp` a `floe::Program*` in which every node has a
-kind, its children, and its source position. Semantic analysis will walk
-this tree to:
+`yyparse()` hands the driver a `floe::Program*` in which every node has a
+kind, its children, and its source position. The parser itself does no type
+checking; it only checks structure.
 
-- build symbol tables;
-- check types;
-- resolve named pipes (`PipeStage::has_call_syntax == false`);
-- check that pipeline stages fit together.
+In addition, the action of the `items` rule passes every finished top-level
+item to a **back end** (`floe_item_handler`, see `src/item_handler.h`) the
+moment it is reduced:
 
-The parser itself does no type checking; it only checks structure.
+```yacc
+items:
+    %empty              { $$ = new floe::NodeList(); }
+  | items item
+        {
+            $$ = $1;
+            if ($2) {
+                $$->emplace_back($2);
+                dispatch_item(*$2);   /* interpreter or code generator */
+            }
+        }
+  ;
+```
+
+`dispatch_item()` calls the handler only while the input has had no lexical
+or syntax errors. The handler is the interpreter in Phase 1
+([interpreter.md](interpreter.md)) or the LLVM code generator in Phase 2
+([codegen.md](codegen.md)); both first run semantic analysis on the item
+([semantic-analysis.md](semantic-analysis.md)).

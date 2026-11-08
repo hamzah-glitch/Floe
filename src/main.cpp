@@ -5,9 +5,14 @@
 #include <memory>
 #include <string>
 
+#include <pthread.h>
+
 #include "ast.h"
+#include "driver.h"
+#include "interpreter.h"
 #include "lexer.h"
 #include "parser.hpp"
+#include "sema.h"
 
 namespace {
 
@@ -115,56 +120,115 @@ int dump_tokens() {
     return floe_lex_error_count > 0 ? 1 : 0;
 }
 
-// Parse the whole file; optionally print the AST. Returns 1 on any error.
-int parse(bool print_tree) {
-    const int status = yyparse();
-    std::unique_ptr<floe::Program> program(floe_parse_result);
-    const int errors = floe_lex_error_count + floe_parse_error_count;
+// Run `body` on a thread with a large stack, so deeply recursive Floe
+// programs do not overflow the interpreter's own C++ stack.
+int run_with_large_stack(int (*body)(void*), void* arg) {
+    struct Call {
+        int (*body)(void*);
+        void* arg;
+        int result;
+    } call{body, arg, 0};
 
-    if (status != 0 || errors > 0 || !program) {
-        std::fprintf(stderr, "%s: %d lexical error(s), %d syntax error(s)\n",
-                     floe_source_name, floe_lex_error_count, floe_parse_error_count);
-        return 1;
+    pthread_attr_t attributes;
+    pthread_attr_init(&attributes);
+    pthread_attr_setstacksize(&attributes, static_cast<size_t>(1) << 30);  // 1 GiB (reserved lazily)
+    pthread_t thread;
+    auto start = [](void* p) -> void* {
+        auto* c = static_cast<Call*>(p);
+        c->result = c->body(c->arg);
+        return nullptr;
+    };
+    if (pthread_create(&thread, &attributes, start, &call) != 0) {
+        pthread_attr_destroy(&attributes);
+        return body(arg);  // fall back to the normal stack
     }
-    if (print_tree) {
-        floe::print_ast(*program, std::cout);
-    } else {
-        std::printf("%s: parsed successfully (%zu top-level items)\n",
-                    floe_source_name, program->items.size());
-    }
-    return 0;
+    pthread_join(thread, nullptr);
+    pthread_attr_destroy(&attributes);
+    return call.result;
+}
+
+// Semantic analysis only, for --check and --typed-ast.
+class Checker : public floe::ItemHandler {
+public:
+    explicit Checker(const char* source_name) : sema_(source_name) {}
+    void handle(floe::Node& item) override { sema_.check_item(item); }
+    int errors() const { return sema_.error_count(); }
+
+private:
+    floe::SemanticAnalyzer sema_;
+};
+
+const char* g_filename = nullptr;
+
+// Phase 1: parse and execute at the same time.
+int run_program(void*) {
+    floe::Interpreter interpreter(g_filename);
+    floe::ParseResult parsed = floe::parse_file(g_filename, &interpreter);
+    if (!parsed.program) return 2;
+    return (!parsed.ok || interpreter.failed()) ? 1 : 0;
+}
+
+void usage() {
+    std::fprintf(stderr,
+                 "usage: floe [mode] <file.floe>\n"
+                 "\n"
+                 "Floe interpreter (Phase 1). Modes:\n"
+                 "  --run        parse, type-check and execute the program (default)\n"
+                 "  --tokens     print the token stream (lexer only)\n"
+                 "  --parse      check the syntax only\n"
+                 "  --ast        print the syntax tree\n"
+                 "  --check      check syntax and types, run nothing\n"
+                 "  --typed-ast  print the syntax tree after type checking\n");
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    const char* mode = nullptr;
-    const char* filename = nullptr;
-    if (argc == 2) {
-        filename = argv[1];
-    } else if (argc == 3 && (std::strcmp(argv[1], "--tokens") == 0 || std::strcmp(argv[1], "--ast") == 0)) {
+    std::string mode = "--run";
+    if (argc == 2 && argv[1][0] != '-') {
+        g_filename = argv[1];
+    } else if (argc == 3) {
         mode = argv[1];
-        filename = argv[2];
+        g_filename = argv[2];
     }
-    if (filename == nullptr) {
-        std::fprintf(stderr, "usage: floe [--tokens | --ast] <file.floe>\n");
+    const bool known_mode = mode == "--run" || mode == "--tokens" || mode == "--parse" || mode == "--ast" ||
+                            mode == "--check" || mode == "--typed-ast";
+    if (g_filename == nullptr || !known_mode) {
+        usage();
         return 2;
     }
 
-    yyin = std::fopen(filename, "r");
-    if (yyin == nullptr) {
-        std::perror(filename);
-        return 2;
+    if (mode == "--run") {
+        return run_with_large_stack(run_program, nullptr);
     }
-    floe_source_name = filename;
 
-    int result;
-    if (mode != nullptr && std::strcmp(mode, "--tokens") == 0) {
-        result = dump_tokens();
+    if (mode == "--tokens") {
+        yyin = std::fopen(g_filename, "r");
+        if (yyin == nullptr) {
+            std::perror(g_filename);
+            return 2;
+        }
+        floe_source_name = g_filename;
+        const int result = dump_tokens();
+        std::fclose(yyin);
+        return result;
+    }
+
+    const bool semantic = mode == "--check" || mode == "--typed-ast";
+    Checker checker(g_filename);
+    floe::ParseResult parsed = floe::parse_file(g_filename, semantic ? &checker : nullptr);
+    if (!parsed.program) return 2;
+    if (!parsed.ok) return 1;
+
+    if (semantic && checker.errors() > 0) {
+        std::fprintf(stderr, "%s: %d semantic error(s)\n", g_filename, checker.errors());
+        return 1;
+    }
+    if (mode == "--ast" || mode == "--typed-ast") {
+        floe::print_ast(*parsed.program, std::cout);
     } else {
-        result = parse(mode != nullptr);
+        std::printf("%s: %s (%zu top-level items)\n", g_filename,
+                    semantic ? "no errors" : "parsed successfully", parsed.program->items.size());
     }
-
-    std::fclose(yyin);
-    return result;
+    return 0;
 }

@@ -274,7 +274,7 @@ Single-character tokens are returned as the character itself
 ## 4. Building and running
 
 ```sh
-make                                   # flex + bison + g++ → build/floe
+make interpreter                       # flex + bison + g++ → build/floe
 ./build/floe --tokens tests/loops.floe # print the token table
 make test-lexer                        # run the lexer tests
 ```

@@ -1,0 +1,28 @@
+// Each statement below contains one semantic (type or scope) error.
+// Semantic analysis reports every one of them and the program is not run.
+let a = undefined_name + 1;
+let b: int = "text";
+let c = 1 + true;
+let d = [1, "two", 3];
+let e = [];
+let n = 5;
+let n = 6;
+fn add(x: int, y: int) -> int { x + y }
+let f = add(1);
+let g = add(1, "2");
+fn no_value(x: int) -> int { let y = x; }
+let h = missing(3);
+let nums = [1, 2, 3];
+let i = nums |> filter(x -> x + 1);
+let j = nums |> map(x -> print(x));
+let k = nums[true];
+let total = 0;
+let l = nums |> map(x -> if x > 0 { total = total + x; x } else { x });
+let m = if n > 3 { 1 } else { "one" };
+let o = if n > 3 { 1 };
+fn print(x: int) { x }
+let p = 5 |> sort();
+let q = add;
+pipe twice = map(x -> x * 2) |> nowhere;
+while 1 { }
+let r: float[] = ["a"];

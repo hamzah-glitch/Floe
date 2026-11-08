@@ -14,6 +14,7 @@ std::string to_string(const TypeName& type) {
         case BaseType::Bool: text = "bool"; break;
         case BaseType::String: text = "string"; break;
         case BaseType::Void: text = "void"; break;
+        case BaseType::Error: text = "<error>"; break;
     }
     for (int i = 0; i < type.array_depth; ++i) {
         text += "[]";
@@ -65,7 +66,11 @@ public:
             return;
         }
         header(*node);
-        out_ << "  [" << node->location.line << ':' << node->location.column << "]\n";
+        // Expression types are only known after semantic analysis (--typed-ast).
+        if (node->type.base != BaseType::Void || node->type.array_depth != 0) {
+            out_ << " : " << to_string(node->type);
+        }
+        out_ << "  ["<< node->location.line << ':' << node->location.column << "]\n";
         children(*node, depth + 1);
     }
 
@@ -270,6 +275,152 @@ private:
 
 void print_ast(const Node& node, std::ostream& out) {
     AstPrinter(out).print(&node, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Deep copy
+// ---------------------------------------------------------------------------
+
+namespace {
+
+NodePtr clone_or_null(const NodePtr& node) {
+    return node ? clone(*node) : nullptr;
+}
+
+NodeList clone_list(const NodeList& nodes) {
+    NodeList copy;
+    for (const NodePtr& node : nodes) {
+        copy.push_back(clone(*node));
+    }
+    return copy;
+}
+
+StageList clone_stages(const StageList& stages) {
+    StageList copy;
+    for (const StagePtr& stage : stages) {
+        copy.push_back(clone(*stage));
+    }
+    return copy;
+}
+
+NodePtr clone_node(const Node& node) {
+    const SourceLocation at = node.location;
+    switch (node.kind) {
+        case NodeKind::Program: {
+            auto copy = std::make_unique<Program>(at);
+            copy->items = clone_list(static_cast<const Program&>(node).items);
+            return copy;
+        }
+        case NodeKind::FunctionDeclaration: {
+            const auto& fn = static_cast<const FunctionDeclaration&>(node);
+            return std::make_unique<FunctionDeclaration>(fn.name, fn.parameters, fn.return_type,
+                                                         clone(*fn.body), at);
+        }
+        case NodeKind::PipelineDeclaration: {
+            const auto& pipe = static_cast<const PipelineDeclaration&>(node);
+            return std::make_unique<PipelineDeclaration>(pipe.name, clone_stages(pipe.stages), at);
+        }
+        case NodeKind::LetStatement: {
+            const auto& let = static_cast<const LetStatement&>(node);
+            return std::make_unique<LetStatement>(let.name, let.declared_type, clone(*let.value), at);
+        }
+        case NodeKind::AssignStatement: {
+            const auto& assign = static_cast<const AssignStatement&>(node);
+            return std::make_unique<AssignStatement>(clone(*assign.target), clone(*assign.value), at);
+        }
+        case NodeKind::ExpressionStatement:
+            return std::make_unique<ExpressionStatement>(
+                clone(*static_cast<const ExpressionStatement&>(node).expression), at);
+        case NodeKind::WhileStatement: {
+            const auto& loop = static_cast<const WhileStatement&>(node);
+            return std::make_unique<WhileStatement>(clone(*loop.condition), clone(*loop.body), at);
+        }
+        case NodeKind::ForInStatement: {
+            const auto& loop = static_cast<const ForInStatement&>(node);
+            return std::make_unique<ForInStatement>(loop.variable, clone(*loop.iterable),
+                                                    clone(*loop.body), at);
+        }
+        case NodeKind::Block:
+            return clone(static_cast<const Block&>(node));
+        case NodeKind::Identifier:
+            return std::make_unique<Identifier>(static_cast<const Identifier&>(node).name, at);
+        case NodeKind::IntegerLiteral:
+            return std::make_unique<IntegerLiteral>(static_cast<const IntegerLiteral&>(node).value, at);
+        case NodeKind::FloatLiteral:
+            return std::make_unique<FloatLiteral>(static_cast<const FloatLiteral&>(node).value, at);
+        case NodeKind::BooleanLiteral:
+            return std::make_unique<BooleanLiteral>(static_cast<const BooleanLiteral&>(node).value, at);
+        case NodeKind::StringLiteral:
+            return std::make_unique<StringLiteral>(static_cast<const StringLiteral&>(node).value, at);
+        case NodeKind::ArrayLiteral:
+            return std::make_unique<ArrayLiteral>(
+                clone_list(static_cast<const ArrayLiteral&>(node).elements), at);
+        case NodeKind::CallExpression: {
+            const auto& call = static_cast<const CallExpression&>(node);
+            return std::make_unique<CallExpression>(call.callee, clone_list(call.arguments), at);
+        }
+        case NodeKind::PipeStage:
+            return clone(static_cast<const PipeStage&>(node));
+        case NodeKind::PipelineExpression: {
+            const auto& pipeline = static_cast<const PipelineExpression&>(node);
+            auto copy = std::make_unique<PipelineExpression>(clone(*pipeline.source), at);
+            copy->stages = clone_stages(pipeline.stages);
+            return copy;
+        }
+        case NodeKind::LambdaExpression: {
+            const auto& lambda = static_cast<const LambdaExpression&>(node);
+            auto copy = std::make_unique<LambdaExpression>(lambda.parameter, clone(*lambda.body), at);
+            copy->parameter_type = lambda.parameter_type;
+            return copy;
+        }
+        case NodeKind::UnaryExpression: {
+            const auto& unary = static_cast<const UnaryExpression&>(node);
+            return std::make_unique<UnaryExpression>(unary.op, clone(*unary.operand), at);
+        }
+        case NodeKind::BinaryExpression: {
+            const auto& binary = static_cast<const BinaryExpression&>(node);
+            return std::make_unique<BinaryExpression>(binary.op, clone(*binary.left),
+                                                      clone(*binary.right), at);
+        }
+        case NodeKind::IfExpression: {
+            const auto& branch = static_cast<const IfExpression&>(node);
+            return std::make_unique<IfExpression>(clone(*branch.condition), clone(*branch.then_block),
+                                                  clone_or_null(branch.else_branch), at);
+        }
+        case NodeKind::IndexExpression: {
+            const auto& index = static_cast<const IndexExpression&>(node);
+            return std::make_unique<IndexExpression>(clone(*index.array), clone(*index.index), at);
+        }
+        case NodeKind::SliceExpression: {
+            const auto& slice = static_cast<const SliceExpression&>(node);
+            return std::make_unique<SliceExpression>(clone(*slice.array), clone(*slice.start),
+                                                     clone(*slice.end), at);
+        }
+    }
+    return nullptr;
+}
+
+}  // namespace
+
+NodePtr clone(const Node& node) {
+    NodePtr copy = clone_node(node);
+    copy->type = node.type;
+    return copy;
+}
+
+BlockPtr clone(const Block& block) {
+    auto copy = std::make_unique<Block>(block.location);
+    copy->statements = clone_list(block.statements);
+    copy->result = clone_or_null(block.result);
+    copy->type = block.type;
+    return copy;
+}
+
+StagePtr clone(const PipeStage& stage) {
+    auto copy = std::make_unique<PipeStage>(stage.name, clone_list(stage.arguments),
+                                            stage.has_call_syntax, stage.location);
+    copy->type = stage.type;
+    return copy;
 }
 
 }  // namespace floe

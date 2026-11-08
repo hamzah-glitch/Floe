@@ -1,0 +1,33 @@
+// Every built-in function, called directly and as a pipeline stage.
+let nums = [5, 3, 9, 1, 7];
+
+print(len(nums), nums |> len());
+nums |> sort() |> print();
+nums |> reverse() |> print();
+print(nums |> sum(), nums |> min(), nums |> max());
+print(append(nums, 11));
+print(nums);                       // append returned a new array
+print(range(0, 5), range(3, 3));
+
+// filter and map chained with sort
+nums |> filter(x -> x % 2 == 1 && x > 2) |> map(x -> x * x) |> sort() |> print();
+
+// map can change the element type
+nums |> map(x -> x > 4) |> print();
+nums |> map(x -> to_float(x) / 2.0) |> print();
+
+// float arrays
+let prices = [2.5, 1.25, 10.0];
+print(prices |> sum(), prices |> min(), prices |> max());
+prices |> sort() |> print();
+
+// strings
+let words = ["pear", "apple", "fig"];
+words |> sort() |> print();
+words |> map(w -> len(w)) |> print();
+words |> filter(w -> len(w) > 3) |> print();
+
+// nested arrays
+let grid = [[1, 2], [3, 4], [5]];
+print(grid, len(grid[2]));
+grid |> map(row -> row |> sum()) |> print();
